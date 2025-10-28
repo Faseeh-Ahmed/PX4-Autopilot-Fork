@@ -51,6 +51,9 @@
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_status.h>
+#include <uORB/topics/mavlink_log.h>
+
+#include <string.h>
 
 #define OSD_SPI_BUS_SPEED (2000000L) /*  2 MHz  */
 
@@ -62,6 +65,9 @@
 #define OSD_NUM_ROWS_NTSC	13
 #define OSD_ZERO_BYTE 0x00
 #define OSD_PAL_TX_MODE 0x40
+
+#define OSD_LOG_MESSAGE_MAX 	127
+#define OSD_DISPLAY_WIDTH 	28
 
 extern "C" __EXPORT int atxxxx_main(int argc, char *argv[]);
 
@@ -97,6 +103,7 @@ private:
 	int add_battery_info(uint8_t pos_x, uint8_t pos_y);
 	int add_altitude(uint8_t pos_x, uint8_t pos_y);
 	int add_flighttime(float flight_time, uint8_t pos_x, uint8_t pos_y);
+	int add_emergency_message(uint8_t pos_x, uint8_t pos_y);
 
 	static const char *get_flight_mode(uint8_t nav_state);
 
@@ -109,6 +116,7 @@ private:
 	uORB::Subscription _battery_sub{ORB_ID(battery_status)};
 	uORB::Subscription _local_position_sub{ORB_ID(vehicle_local_position)};
 	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
+	uORB::Subscription _mavlink_log_sub{ORB_ID(mavlink_log)};
 
 	// battery
 	float _battery_voltage_v{0.f};
@@ -125,6 +133,10 @@ private:
 
 	// flight mode
 	uint8_t _nav_state{0};
+
+	// log message
+	char _current_osd_message[OSD_LOG_MESSAGE_MAX + 1]{}; // +1 for null terminator
+	hrt_abstime _message_display_until{0};
 
 	DEFINE_PARAMETERS(
 		(ParamInt<px4::params::OSD_ATXXXX_CFG>) _param_osd_atxxxx_cfg

@@ -1,0 +1,5 @@
+menuconfig MODULES_CUSTOM_FUSE
+	bool "custom_fuse"
+	default y
+	---help---
+		Enable support for custom_fuse

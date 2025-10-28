@@ -634,6 +634,8 @@ else
 		zenoh start
 	fi
 
+	custom_fuse start
+
 #
 # End of autostart.
 #
