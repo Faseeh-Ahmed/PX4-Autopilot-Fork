@@ -63,13 +63,13 @@
 
 #define PL1_RC_SWITCH_CH 6
 #define PL2_RC_SWITCH_CH 6
-// #define PL3_RC_SWITCH_CH 8
+#define PL3_RC_SWITCH_CH 8
 #define PYLON_RC_SWITCH_CH 5
 #define RESET_RC_SWITCH_CH 7
 
 #define PL1_SERVO_NUM 2
 #define PL2_SERVO_NUM 3
-// #define PL3_SERVO_NUM 4
+#define PL3_SERVO_NUM 4
 #define PYLON_SERVO_NUM 1
 
 #define SAFETY_TIME 35_s
@@ -113,7 +113,7 @@ private:
 		ALL_SAFETIES_ENGAGED = 0,
 		PL1_SAFETY_DISENGAGED,
 		PL2_SAFETY_DISENGAGED,
-		// PL3_SAFETY_DISENGAGED,
+		PL3_SAFETY_DISENGAGED,
 		PYLON_SAFETY_DISENGAGED,
 	};
 
@@ -157,17 +157,17 @@ private:
 	bool _pylon_safety_engaged{true};
 	bool _pl1_safety_engaged{true};
 	bool _pl2_safety_engaged{true};
-	// bool _pl3_safety_engaged{true};
+	bool _pl3_safety_engaged{true};
 
 	bool _pylon_safety_ack{false};
 	bool _pl1_safety_ack{false};
 	bool _pl2_safety_ack{false};
-	// bool _pl3_safety_ack{false};
+	bool _pl3_safety_ack{false};
 
 	bool _pylon_rc_engaged{true};
 	bool _pl1_rc_engaged{true};
 	bool _pl2_rc_engaged{true};
-	// bool _pl3_rc_engaged{true};
+	bool _pl3_rc_engaged{true};
 
 	bool _reset_rc_pressed{false};
 
