@@ -59,6 +59,27 @@ void CustomFuse::Run()
 {
 	parameters_update();
 	updateStates();
+
+	// ONLY FOR DEBUGGING
+	// px4_usleep(3000000); // 3 seconds
+
+	// operate_servo(PYLON_SERVO_NUM, true); // Test command to PYLON servo
+	// px4_usleep(1000000); // 1 seconds
+	// operate_servo(PL1_SERVO_NUM, true); // Test command to PL1 servo
+	// px4_usleep(1000000); // 1 seconds
+	// operate_servo(PL2_SERVO_NUM, true); // Test command to PL2 servo
+	// px4_usleep(1000000); // 1 seconds
+	// operate_servo(PL3_SERVO_NUM, true); // Test command to PL3 servo
+
+	// px4_usleep(3000000); // 3 seconds
+
+	// operate_servo(PYLON_SERVO_NUM, false); // Test command to PYLON servo
+	// px4_usleep(1000000); // 1 seconds
+	// operate_servo(PL1_SERVO_NUM, false); // Test command to PL1 servo
+	// px4_usleep(1000000); // 1 seconds
+	// operate_servo(PL2_SERVO_NUM, false); // Test command to PL2 servo
+	// px4_usleep(1000000); // 1 seconds
+	// operate_servo(PL3_SERVO_NUM, false); // Test command to PL3 servo
 }
 
 void CustomFuse::parameters_update()
@@ -74,7 +95,7 @@ void CustomFuse::updateStates()
 {
 
 	// Handle Acks
-	check_ack();
+	// check_ack();
 
 	vehicle_status_s status{};
 	bool status_updated = _vehicle_status_sub.updated();
@@ -201,6 +222,7 @@ void CustomFuse::updateStates()
 				sendInfoToGCS("RESET SWITCH ENGAGED.       ENGAGING ALL SAFETIES.");
 				reset_state();
 				_last_reset_time = hrt_absolute_time();
+				return;
 			} else {
 				return;
 			}
@@ -213,11 +235,17 @@ void CustomFuse::updateStates()
 				if (!_pl1_rc_engaged)
 				{
 					if (conditions_met()) {
-						operate_servo(PL1_SERVO_NUM, true); //disengage
+						if (!_servo_command_once) {
+							// sendInfoToGCS("DISENGAGING PL 1 SAFETY.    PLEASE WAIT...");
+							operate_servo(PL1_SERVO_NUM, true); //disengage
+							_servo_command_once = true;
+						}
+						// operate_servo(PL1_SERVO_NUM, true); //disengage
 						check_ack();
 						if (_pl1_safety_ack) {
 							_reset_warn_once = false;
 							_conditions_warn_once = false;
+							_servo_command_once = false;
 							sendInfoToGCS("PL 1 SAFETY DISENGAGED.");
 							_state = ModuleState::PL1_SAFETY_DISENGAGED;
 						}
@@ -234,15 +262,21 @@ void CustomFuse::updateStates()
 			break;
 
 		case ModuleState::PL1_SAFETY_DISENGAGED:
-			if (_pylon_rc_engaged && !_pl1_rc_engaged && _pl3_rc_engaged) {
+			if (_pylon_rc_engaged /*&& !_pl1_rc_engaged*/ && _pl3_rc_engaged) {
 				if (!_pl2_rc_engaged)
 				{
 					if (conditions_met()) {
-						operate_servo(PL2_SERVO_NUM, true); //disengage
+						if (!_servo_command_once) {
+							// sendInfoToGCS("DISENGAGING PL 2 SAFETY.    PLEASE WAIT...");
+							operate_servo(PL2_SERVO_NUM, true); //disengage
+							_servo_command_once = true;
+						}
+						// operate_servo(PL2_SERVO_NUM, true); //disengage
 						check_ack();
 						if (_pl2_safety_ack) {
 							_reset_warn_once = false;
 							_conditions_warn_once = false;
+							_servo_command_once = false;
 							sendInfoToGCS("PL 2 SAFETY DISENGAGED.");
 							_state = ModuleState::PL2_SAFETY_DISENGAGED;
 							}
@@ -258,10 +292,16 @@ void CustomFuse::updateStates()
 			}
 
 			if (_pl1_rc_engaged) {
-				operate_servo(PL1_SERVO_NUM, false); //engage
+				if (!_servo_command_once) {
+					// sendInfoToGCS("ENGAGING PL 1 SAFETY.    PLEASE WAIT...");
+					operate_servo(PL1_SERVO_NUM, false); //engage
+					_servo_command_once = true;
+				}
+				// operate_servo(PL1_SERVO_NUM, false); //engage
 				check_ack();
 				if (_pl1_safety_ack) {
 					_pl1_safety_ack = false;
+					_servo_command_once = false;
 					sendInfoToGCS("PL 1 SAFETY ENGAGED.");
 					_state = ModuleState::ALL_SAFETIES_ENGAGED;
 				}
@@ -269,15 +309,21 @@ void CustomFuse::updateStates()
 			break;
 
 		case ModuleState::PL2_SAFETY_DISENGAGED:
-			if (_pylon_rc_engaged && !_pl2_rc_engaged && !_pl1_rc_engaged) {
+			if (_pylon_rc_engaged /*&& !_pl2_rc_engaged*/ && !_pl1_rc_engaged) {
 				if (!_pl3_rc_engaged)
 				{
 					if (conditions_met()) {
-						operate_servo(PL3_SERVO_NUM, true); //disengage
+						if (!_servo_command_once) {
+							// sendInfoToGCS("DISENGAGING PL 3 SAFETY.    PLEASE WAIT...");
+							operate_servo(PL3_SERVO_NUM, true); //disengage
+							_servo_command_once = true;
+						}
+						// operate_servo(PL3_SERVO_NUM, true); //disengage
 						check_ack();
 						if (_pl3_safety_ack) {
 							_reset_warn_once = false;
 							_conditions_warn_once = false;
+							_servo_command_once = false;
 							sendInfoToGCS("PL 3 SAFETY DISENGAGED.");
 							_state = ModuleState::PL3_SAFETY_DISENGAGED;
 						}
@@ -287,12 +333,22 @@ void CustomFuse::updateStates()
 					}
 				}
 			}
+			else if (!_reset_warn_once) {
+				sendInfoToGCS("RESET PYLON/PL SWITCHES TO  PROCEED. ALREADY TRIGGERED.");
+				_reset_warn_once = true;
+			}
 
 			if (_pl2_rc_engaged) {
-				operate_servo(PL2_SERVO_NUM, false); //engage
+				if (!_servo_command_once) {
+					// sendInfoToGCS("ENGAGING PL 2 SAFETY.    PLEASE WAIT...");
+					operate_servo(PL2_SERVO_NUM, false); //engage
+					_servo_command_once = true;
+				}
+				// operate_servo(PL2_SERVO_NUM, false); //engage
 				check_ack();
 				if (_pl2_safety_ack) {
 					_pl2_safety_ack = false;
+					_servo_command_once = false;
 					sendInfoToGCS("PL 2 SAFETY ENGAGED.");
 					_state = ModuleState::PL1_SAFETY_DISENGAGED;
 				}
@@ -300,15 +356,21 @@ void CustomFuse::updateStates()
 			break;
 
 		case ModuleState::PL3_SAFETY_DISENGAGED:
-			if (!_pl2_rc_engaged && !_pl1_rc_engaged && !_pl3_rc_engaged) {
+			if (!_pl2_rc_engaged && !_pl1_rc_engaged /*&& !_pl3_rc_engaged*/) {
 				if (!_pylon_rc_engaged)
 				{
 					if (conditions_met()) {
-						operate_servo(PYLON_SERVO_NUM, true); //disengage
+						if (!_servo_command_once) {
+							// sendInfoToGCS("DISENGAGING PYLON SAFETY.    PLEASE WAIT...");
+							operate_servo(PYLON_SERVO_NUM, true); //disengage
+							_servo_command_once = true;
+						}
+						// operate_servo(PYLON_SERVO_NUM, true); //disengage
 						check_ack();
 						if (_pylon_safety_ack) {
 							_reset_warn_once = false;
 							_conditions_warn_once = false;
+							_servo_command_once = false;
 							sendInfoToGCS("PYLON SAFETY DISENGAGED.");
 							_state = ModuleState::PYLON_SAFETY_DISENGAGED;
 						}
@@ -320,10 +382,16 @@ void CustomFuse::updateStates()
 			}
 
 			if (_pl3_rc_engaged) {
-				operate_servo(PL3_SERVO_NUM, false); //engage
+				if (!_servo_command_once) {
+					// sendInfoToGCS("ENGAGING PYLON SAFETY.    PLEASE WAIT...");
+					operate_servo(PYLON_SERVO_NUM, false); //engage
+					_servo_command_once = true;
+				}
+				// operate_servo(PL3_SERVO_NUM, false); //engage
 				check_ack();
 				if (_pl3_safety_ack) {
 					_pl3_safety_ack = false;
+					_servo_command_once = false;
 					sendInfoToGCS("PL 3 SAFETY ENGAGED.");
 					_state = ModuleState::PL2_SAFETY_DISENGAGED;
 				}
@@ -337,10 +405,16 @@ void CustomFuse::updateStates()
 			// }
 
 			if (_pylon_rc_engaged) {
-				operate_servo(PYLON_SERVO_NUM, false); //engage
+				if (!_servo_command_once) {
+					// sendInfoToGCS("ENGAGING PYLON SAFETY.    PLEASE WAIT...");
+					operate_servo(PYLON_SERVO_NUM, true); //engage
+					_servo_command_once = true;
+				}
+				// operate_servo(PYLON_SERVO_NUM, false); //engage
 				check_ack();
 				if (_pylon_safety_ack) {
 					_pylon_safety_ack = false;
+					_servo_command_once = false;
 					sendInfoToGCS("PYLON SAFETY ENGAGED.");
 					_state = ModuleState::PL3_SAFETY_DISENGAGED;
 				}
@@ -352,7 +426,7 @@ void CustomFuse::updateStates()
 
 bool CustomFuse::conditions_met()
 {
-	// only for debugging
+	// only for debugging (bypass all safety conditions)
 	return true;
 
 	if (!_armed) {
@@ -505,23 +579,23 @@ int CustomFuse::reset_state()
 {
 	// Engage all servos
 	operate_servo(PYLON_SERVO_NUM, false);
-	px4_usleep(500000); // 0.5 seconds
-	operate_servo(PL1_SERVO_NUM, false);
-	px4_usleep(500000); // 0.5 seconds
-	operate_servo(PL2_SERVO_NUM, false);
-	px4_usleep(500000); // 0.5 seconds
+	px4_usleep(1000000); // 1 seconds
 	operate_servo(PL3_SERVO_NUM, false);
-	px4_usleep(500000); // 0.5 seconds
+	px4_usleep(1000000); // 1 seconds
+	operate_servo(PL2_SERVO_NUM, false);
+	px4_usleep(1000000); // 1 seconds
+	operate_servo(PL1_SERVO_NUM, false);
+	px4_usleep(1000000); // 1 seconds
 
 	// Reset engagement flags
 	_pylon_safety_engaged = true;
 	_pl1_safety_engaged = true;
 	_pl2_safety_engaged = true;
 	_pl3_safety_engaged = true;
-	_pylon_rc_engaged = true;
-	_pl1_rc_engaged = true;
-	_pl2_rc_engaged = true;
-	_pl3_rc_engaged = true;
+	// _pylon_rc_engaged = true;
+	// _pl1_rc_engaged = true;
+	// _pl2_rc_engaged = true;
+	// _pl3_rc_engaged = true;
 
 	_pylon_safety_ack = false;
 	_pl1_safety_ack = false;

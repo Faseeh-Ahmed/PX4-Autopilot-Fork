@@ -173,6 +173,7 @@ private:
 
 	bool _reset_warn_once{false};
 	bool _conditions_warn_once{false};
+	bool _servo_command_once{false};
 
 	uint8_t _nav_state{0};
 	uint8_t _arming_state{0};
