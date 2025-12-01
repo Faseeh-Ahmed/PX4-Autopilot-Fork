@@ -1,0 +1,205 @@
+module_name: custom_fuse
+parameters:
+    - group: Custom_Fuse
+      definitions:
+        # Pylon configuration
+        FUSE_PYLON_TYPE:
+            description:
+                short: Type of Pylon (A or B)
+            type: enum
+            values:
+                0: Disabled
+                1: Type-A
+                2: Type-B
+            min: 0
+            max: 2
+            default: 0
+            reboot_required: true
+
+        # RC Channel assignments
+        FUSE_RST_RC_SW:
+            description:
+                short: RC Switch for FUSE Reset Command
+                long: |
+                  Select the RC channel used to send the FUSE Reset command to the Pylon.
+                  Always select a 2-position RC switch for this channel.
+            type: enum
+            values:
+                1: Channel 1
+                2: Channel 2
+                3: Channel 3
+                4: Channel 4
+                5: Channel 5
+                6: Channel 6
+                7: Channel 7
+                8: Channel 8
+                9: Channel 9
+                10: Channel 10
+                11: Channel 11
+                12: Channel 12
+                13: Channel 13
+                14: Channel 14
+                15: Channel 15
+                16: Channel 16
+                17: Channel 17
+                18: Channel 18
+            min: 1
+            max: 18
+            default: 7
+
+        FUSE_PL_SL_RC_S1:
+            description:
+                short: RC Switch 1 for PL Select
+                long: |
+                  Select the RC channel for RC Switch 1 to select the PL whose safeties are to be managed.
+                  Always select a 3-position RC switch for this channel.
+                  If Type-A pylon is used, then set only this parameter.
+                  If Type-B pylon is used, then you need to set FUSE_PL_SL_RC_S2 and FUSE_PL_SL_RC_S3 too.
+            type: enum
+            values:
+                1: Channel 1
+                2: Channel 2
+                3: Channel 3
+                4: Channel 4
+                5: Channel 5
+                6: Channel 6
+                7: Channel 7
+                8: Channel 8
+                9: Channel 9
+                10: Channel 10
+                11: Channel 11
+                12: Channel 12
+                13: Channel 13
+                14: Channel 14
+                15: Channel 15
+                16: Channel 16
+                17: Channel 17
+                18: Channel 18
+            min: 1
+            max: 18
+            default: 8
+
+        FUSE_PL_SL_RC_S2:
+            description:
+                short: RC Switch 2 for PL Select
+                long: |
+                  Select the RC channel for RC Switch 2 to select the PL whose safeties are to be managed.
+                  Always select a 3-position RC switch for this channel.
+                  If Type-B pylon is used, then you need to set FUSE_PL_SL_RC_S1 and FUSE_PL_SL_RC_S3 too.
+            type: enum
+            values:
+                1: Channel 1
+                2: Channel 2
+                3: Channel 3
+                4: Channel 4
+                5: Channel 5
+                6: Channel 6
+                7: Channel 7
+                8: Channel 8
+                9: Channel 9
+                10: Channel 10
+                11: Channel 11
+                12: Channel 12
+                13: Channel 13
+                14: Channel 14
+                15: Channel 15
+                16: Channel 16
+                17: Channel 17
+                18: Channel 18
+            min: 1
+            max: 18
+            default: 9
+
+        FUSE_PL_SL_RC_S3:
+            description:
+                short: RC Switch 3 for PL Select
+                long: |
+                  Select the RC channel for RC Switch 3 to select the PL whose safeties are to be managed.
+                  Always select a 2-position RC switch for this channel.
+                  If Type-B pylon is used, then you need to set FUSE_PL_SL_RC_S1 and FUSE_PL_SL_RC_S2 too.
+            type: enum
+            values:
+                1: Channel 1
+                2: Channel 2
+                3: Channel 3
+                4: Channel 4
+                5: Channel 5
+                6: Channel 6
+                7: Channel 7
+                8: Channel 8
+                9: Channel 9
+                10: Channel 10
+                11: Channel 11
+                12: Channel 12
+                13: Channel 13
+                14: Channel 14
+                15: Channel 15
+                16: Channel 16
+                17: Channel 17
+                18: Channel 18
+            min: 1
+            max: 18
+            default: 10
+
+        FUSE_PL_SF_RC_S1:
+            description:
+                short: RC Switch 1 for PL Safety Control
+                long: |
+                  Select the RC channel for RC Switch 1 to control the safety state (engage/disengage) of the selected PL.
+                  Always select a 3-position RC switch for this channel.
+                  Also set FUSE_PL_SF_RC_S2 parameter.
+            type: enum
+            values:
+                1: Channel 1
+                2: Channel 2
+                3: Channel 3
+                4: Channel 4
+                5: Channel 5
+                6: Channel 6
+                7: Channel 7
+                8: Channel 8
+                9: Channel 9
+                10: Channel 10
+                11: Channel 11
+                12: Channel 12
+                13: Channel 13
+                14: Channel 14
+                15: Channel 15
+                16: Channel 16
+                17: Channel 17
+                18: Channel 18
+            min: 1
+            max: 18
+            default: 11
+
+        FUSE_PL_SF_RC_S2:
+            description:
+                short: RC Switch 2 for PL Safety Control
+                long: |
+                  Select the RC channel for RC Switch 2 to control the safety state (engage/disengage) of the selected PL.
+                  Always select a 2-position RC switch for this channel.
+                  Also set FUSE_PL_SF_RC_S1 parameter.
+            type: enum
+            values:
+                1: Channel 1
+                2: Channel 2
+                3: Channel 3
+                4: Channel 4
+                5: Channel 5
+                6: Channel 6
+                7: Channel 7
+                8: Channel 8
+                9: Channel 9
+                10: Channel 10
+                11: Channel 11
+                12: Channel 12
+                13: Channel 13
+                14: Channel 14
+                15: Channel 15
+                16: Channel 16
+                17: Channel 17
+                18: Channel 18
+            min: 1
+            max: 18
+            default: 12
+

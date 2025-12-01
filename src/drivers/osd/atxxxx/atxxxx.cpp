@@ -298,6 +298,69 @@ OSDatxxxx::add_flighttime(float flight_time, uint8_t pos_x, uint8_t pos_y)
 }
 
 int
+OSDatxxxx::add_emergency_message(uint8_t pos_x, uint8_t pos_y)
+{
+	int ret = PX4_OK;
+	const int display_width = OSD_DISPLAY_WIDTH;
+	size_t msg_len = strlen(_current_osd_message);
+
+	if (msg_len == 0 || hrt_absolute_time() > _message_display_until) {
+		// Clear the area (up to 2 rows)
+		clear_line(pos_x, pos_y, display_width);
+		clear_line(pos_x, pos_y + 1, display_width);
+		return ret;
+	}
+
+	char row1[display_width + 1] = {0};
+	char row2[display_width + 1] = {0};
+
+	if (msg_len <= display_width) {
+		// Single row
+		strncpy(row1, _current_osd_message, display_width);
+		row1[display_width] = '\0';
+		// Render row1
+		for (int i = 0; i < display_width && row1[i] != '\0'; ++i) {
+			ret |= add_character_to_screen(row1[i], pos_x + i, pos_y);
+		}
+		// Clear remaining in row1
+		for (int i = strlen(row1); i < display_width; ++i) {
+			ret |= add_character_to_screen(' ', pos_x + i, pos_y);
+		}
+		// Clear row2
+		clear_line(pos_x, pos_y + 1, display_width);
+	} else {
+		// Two rows: First 28 chars on row1, rest on row2
+		strncpy(row1, _current_osd_message, display_width);
+		row1[display_width] = '\0';
+		size_t remaining_start = display_width;
+		size_t remaining_len = msg_len - remaining_start;
+		if (remaining_len > display_width) {
+			remaining_len = display_width; // Truncate if still too long
+		}
+		strncpy(row2, _current_osd_message + remaining_start, remaining_len);
+		row2[remaining_len] = '\0';
+		// Render row1
+		for (int i = 0; i < display_width && row1[i] != '\0'; ++i) {
+			ret |= add_character_to_screen(row1[i], pos_x + i, pos_y);
+		}
+		// Clear remaining in row1 if needed
+		for (int i = strlen(row1); i < display_width; ++i) {
+			ret |= add_character_to_screen(' ', pos_x + i, pos_y);
+		}
+		// Render row2
+		for (int i = 0; i < display_width && row2[i] != '\0'; ++i) {
+			ret |= add_character_to_screen(row2[i], pos_x + i, pos_y + 1);
+		}
+		// Clear remaining in row2
+		for (int i = strlen(row2); i < display_width; ++i) {
+			ret |= add_character_to_screen(' ', pos_x + i, pos_y + 1);
+		}
+	}
+
+	return ret;
+}
+
+int
 OSDatxxxx::enable_screen()
 {
 	uint8_t data = 0;
@@ -368,6 +431,17 @@ OSDatxxxx::update_topics()
 
 		_arming_state = vehicle_status.arming_state;
 		_nav_state = vehicle_status.nav_state;
+	}
+
+	/* update log message subscription */
+	if (_mavlink_log_sub.updated()) {
+		mavlink_log_s log_msg{};
+		_mavlink_log_sub.copy(&log_msg);
+		if (log_msg.severity == 0) { // Display emergency messages only
+			strncpy(_current_osd_message, log_msg.text, OSD_LOG_MESSAGE_MAX);
+			_current_osd_message[OSD_LOG_MESSAGE_MAX] = '\0'; // Ensure null termination
+			_message_display_until = hrt_absolute_time() + 5_s;
+		}
 	}
 
 	return PX4_OK;
@@ -459,6 +533,11 @@ OSDatxxxx::update_screen()
 	}
 
 	add_string_to_screen_centered(flight_mode, 12, 10);
+
+	// Emergency message at bottom
+	// Position 1,9 and 1,10 to have some margin to the screen edges
+	// It can use up to 2 rows
+	ret |= add_emergency_message(1, 9);
 
 	return ret;
 }
