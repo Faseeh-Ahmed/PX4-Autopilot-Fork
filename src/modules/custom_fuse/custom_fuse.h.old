@@ -82,8 +82,6 @@
 #define MAX_MAV_CMD_TIMEOUT 3_s
 #define RESET_TIMEOUT 15_s
 
-#define MAX_SAFETIES 4  // Safeties 1-3 + Pylon safety (4)
-
 using namespace time_literals;
 
 class Mavlink;
@@ -110,44 +108,108 @@ public:
 	void stop();
 
 private:
-	enum class PL_STATE {
-		NOT_PRESENT = 0,
-		ALL_SAFETIES_ENGAGED,
-		SELECTED,
-		SFTY1_DISENGAGED,
-		SFTY2_DISENGAGED,
-		SFTY3_DISENGAGED,
-		PYLON_SFTY_DISENGAGED,
-		RESETTING
+	enum class PYLON_A_STATE {
+		ALL_SAFETIES_ENGAGED = 0,
+		PL1_SELECTED,
+		PL1_SFTY1_DISENGAGED,
+		PL1_SFTY2_DISENGAGED,
+		PL1_SFTY3_DISENGAGED,
+		PL1_PYLON_SFTY_DISENGAGED,
+		PL2_SELECTED,
+		PL2_SFTY1_DISENGAGED,
+		PL2_SFTY2_DISENGAGED,
+		PL2_SFTY3_DISENGAGED,
+		PL2_PYLON_SFTY_DISENGAGED
 	};
 
-	static constexpr uint8_t MAX_PLS = 10;  // Scalable maximum payloads
+	enum class PYLON_B_STATE {
+		ALL_SAFETIES_ENGAGED = 0,
+		PL1_SELECTED,
+		PL1_SFTY1_DISENGAGED,
+		PL1_SFTY2_DISENGAGED,
+		PL1_SFTY3_DISENGAGED,
+		PL1_PYLON_SFTY_DISENGAGED,
+		PL2_SELECTED,
+		PL2_SFTY1_DISENGAGED,
+		PL2_SFTY2_DISENGAGED,
+		PL2_SFTY3_DISENGAGED,
+		PL2_PYLON_SFTY_DISENGAGED,
+		PL3_SELECTED,
+		PL3_SFTY1_DISENGAGED,
+		PL3_SFTY2_DISENGAGED,
+		PL3_SFTY3_DISENGAGED,
+		PL3_PYLON_SFTY_DISENGAGED,
+		PL4_SELECTED,
+		PL4_SFTY1_DISENGAGED,
+		PL4_SFTY2_DISENGAGED,
+		PL4_SFTY3_DISENGAGED,
+		PL4_PYLON_SFTY_DISENGAGED,
+		PL5_SELECTED,
+		PL5_SFTY1_DISENGAGED,
+		PL5_SFTY2_DISENGAGED,
+		PL5_SFTY3_DISENGAGED,
+		PL5_PYLON_SFTY_DISENGAGED,
+		PL6_SELECTED,
+		PL6_SFTY1_DISENGAGED,
+		PL6_SFTY2_DISENGAGED,
+		PL6_SFTY3_DISENGAGED,
+		PL6_PYLON_SFTY_DISENGAGED,
+		PL7_SELECTED,
+		PL7_SFTY1_DISENGAGED,
+		PL7_SFTY2_DISENGAGED,
+		PL7_SFTY3_DISENGAGED,
+		PL7_PYLON_SFTY_DISENGAGED,
+		PL8_SELECTED,
+		PL8_SFTY1_DISENGAGED,
+		PL8_SFTY2_DISENGAGED,
+		PL8_SFTY3_DISENGAGED,
+		PL8_PYLON_SFTY_DISENGAGED,
+		PL9_SELECTED,
+		PL9_SFTY1_DISENGAGED,
+		PL9_SFTY2_DISENGAGED,
+		PL9_SFTY3_DISENGAGED,
+		PL9_PYLON_SFTY_DISENGAGED,
+		PL10_SELECTED,
+		PL10_SFTY1_DISENGAGED,
+		PL10_SFTY2_DISENGAGED,
+		PL10_SFTY3_DISENGAGED,
+		PL10_PYLON_SFTY_DISENGAGED
+	};
+
+	PYLON_A_STATE _state_A{PYLON_A_STATE::ALL_SAFETIES_ENGAGED};
+	PYLON_B_STATE _state_B{PYLON_B_STATE::ALL_SAFETIES_ENGAGED};
 
 	static constexpr uint16_t MAV_CMD_USER_1 = 31010;
 	static constexpr uint16_t MAV_CMD_USER_2 = 31011;
 
-	void send_custom_mavlink_message(bool for_pylon, uint8_t pl_num, uint8_t pl_sfty_num, bool disengage);
+	void send_custom_mavlink_message(bool for_pylon, uint8_t pl_num, uint8_t pl_sfty_num, bool disengage); // (completed)
 
-	void send_info_to_gcs(const char *message);
+	void send_info_to_gcs(const char *message); // (completed)
 
-	void check_pylon_type();
+	void check_pylon_type(); // (completed)
 
-	void get_pl_info();
+	void get_pl_info(); // (completed)
 
-	void reset_pl(uint8_t pl_num);  // Initiate reset for specific PL (non-blocking)
-	void reset_all_pls();  // Initiate reset for all attached PLs
+	bool reset_state_A(uint8_t pl_num = 0); // takes pl num to reset safeties for specific pl; 0 for all, 1 for PL1, 2 for PL2 // (completed)
+	// bool reset_state_B(uint8_t pl_num); // takes pl num to reset safeties for specific pl; 0 for all // (in progress)
 
-	bool check_ack();
+	bool check_ack(); // (completed)
 
-	bool conditions_met();
+	bool conditions_met(); // (completed)
 
-	void parameters_update();
+	void parameters_update(); // (completed)
 
-	void process_rc_inputs();  // Unified for both types
+	void process_rc_inputs_A(); // (completed)
+	void process_rc_inputs_B(); // (completed)
+    	// void init_debouncers();
 
-	void update_states();  // Handle state updates non-blockingly
+	void check_exec_reset_A(); // (completed)
+	// void check_exec_reset_B(); // (in progress)
 
-	void safety_status_update();
+	void update_states_A(); // (completed)
+	// void update_states_B(); // (in progress)
+
+	void safety_status_update(); // (completed)
 
 	DEFINE_PARAMETERS(
 		(ParamInt<px4::params::PWM_MAIN_MIN1>) 		_param_pwm_min,
@@ -173,6 +235,7 @@ private:
 
 	uint64_t _last_ack_timestamp{0};
 	orb_advert_t _mavlink_log_pub{nullptr};
+	uint8_t _servo_commanded{0};
 	bool _pending_disengage{false};
 
 	uint8_t _rst_ch{7};
@@ -192,7 +255,6 @@ private:
 	uint8_t _pylon_type{0};
 	uint8_t _prev_pylon_type{0};
 	uint8_t _selected_pl{0};
-	uint8_t _prev_selected_pl{0};
 	uint8_t _safety_num{0};
 
 	uint8_t _pl_count{0};
@@ -208,9 +270,8 @@ private:
 	bool _pl_count_warn_once{false};
 	bool _pl_mask_warn_once{false};
 	bool _pylon_chng_once{false};
-	bool _pl_info_req_to_once{false};
 
-	hrt_abstime _mav_command_timeout_counter{0};
+	hrt_abstime _mav_command_timout_counter{0};
 	hrt_abstime _start_time{0};
 
 	uint8_t _nav_state{0};
@@ -279,7 +340,7 @@ private:
 	DebouncedTernarySwitch _deb_pl_slct_ch2;
 	DebouncedBinarySwitch _deb_pl_slct_ch3;
 	DebouncedTernarySwitch _deb_pl_sfty_ch1;
-	DebouncedTernarySwitch _deb_pl_sfty_ch2;
+	DebouncedBinarySwitch _deb_pl_sfty_ch2;
 
 	bool _armed{false};
 	hrt_abstime _arming_timestamp{0};
@@ -296,11 +357,4 @@ private:
 	float _arming_alt{0.0f};
 
 	bool _home_updated{false};
-
-	// Per-PL state management
-	PL_STATE _pl_states[MAX_PLS + 1]{};  // Index 1 to MAX_PLS
-	hrt_abstime _pl_timers[MAX_PLS + 1]{};  // For timeouts/retries
-	uint8_t _pl_reset_sfty[MAX_PLS + 1]{};  // Current safety being reset (starts at 4)
-	bool _pl_mav_sent[MAX_PLS + 1]{};  // Flag if MAV command sent, waiting for ack
-	uint8_t _max_pls{0};  // 2 for type 1, 10 for type 2
 };

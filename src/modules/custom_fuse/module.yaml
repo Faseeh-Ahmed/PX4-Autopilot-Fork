@@ -1,6 +1,6 @@
 module_name: custom_fuse
 parameters:
-    - group: Custom_Fuse
+    - group: Custom Fuse
       definitions:
         # Pylon configuration
         FUSE_PYLON_TYPE:
