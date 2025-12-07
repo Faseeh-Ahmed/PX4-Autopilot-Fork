@@ -1,0 +1,5 @@
+menuconfig MODULES_CUSTOM_MODULE
+	bool "custom_module"
+	default n
+	---help---
+		Enable support for custom_module
