@@ -37,6 +37,8 @@ px4_add_module(
 	SRCS
 		custom_module.cpp
 		custom_module.h
+	MODULE_CONFIG
+		module.yaml
 	DEPENDS
 		px4_work_queue
 	)
