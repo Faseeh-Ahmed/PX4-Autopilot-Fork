@@ -572,11 +572,11 @@ OSDatxxxx::update_screen()
 
 	if (_proximity_dist_valid)
 	{
-		add_proximity_dist(1, 8);
+		add_proximity_dist(1, 13);
 	}
 	else
 	{
-		clear_line(1, 8, 27);
+		clear_line(1, 13, 27);
 	}
 
 	return ret;
