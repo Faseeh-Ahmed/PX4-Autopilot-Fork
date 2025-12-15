@@ -60,29 +60,25 @@ void CustomModule::Run()
 
 	parameters_update();
 
+	update_topics();
+
 	safety_status_update();
 
-	update_home();
+	// update_home();
 
-	rc_channels_s rc{};
-	_rc_channels_sub.copy(&rc);
+	_rc_high = rc.channels[((uint8_t)_param_safety_rc_ch.get() - 1)] >= 0.85f;
 
-	distance_sensor_s dist{};
-	_distance_sensor_sub.copy(&dist);
-
-	bool rc_high = rc.channels[((uint8_t)_param_safety_rc_ch.get() - 1)] >= 0.85f;
-
-	if (rc_high && !_rc_high_once)
+	if (_rc_high && !_rc_high_once)
 	{
 		send_info_to_gcs("ENGAGEMENT BUTTON IS        SWITCHED ON");
 		_rc_high_once = true;
 	}
-	else if (!rc_high)
+	else if (!_rc_high)
 	{
 		_rc_high_once = false;
 	}
 
-	bool trigger = rc_high && (dist.current_distance <= _param_safety_eng_dist.get()) && _safety_check_passed;
+	bool trigger = _rc_high && (dist_sens.current_distance <= _param_safety_eng_dist.get()) && _safety_check_passed;
 
 	double pwm = trigger ? 1.0f : -1.0f;
 
@@ -127,32 +123,6 @@ void CustomModule::safety_status_update()
 		return;
 	}
 
-	vehicle_status_s status{};
-	if (_vehicle_status_sub.updated()) {
-		_vehicle_status_sub.copy(&status);
-		_nav_state = status.nav_state;
-		_arming_state = status.arming_state;
-	}
-
-	vehicle_local_position_s pos{};
-	if (_vehicle_local_position_sub.updated()) {
-		_vehicle_local_position_sub.copy(&pos);
-		_local_pos_x = pos.x;
-		_local_pos_y = pos.y;
-		_local_pos_z = pos.z;
-		_local_heading = pos.heading;
-	}
-
-	vehicle_global_position_s global_pos{};
-	if (_vehicle_global_position_sub.updated()) {
-		_vehicle_global_position_sub.copy(&global_pos);
-		_global_lat = global_pos.lat;
-		_global_lon = global_pos.lon;
-		_global_alt = global_pos.alt;
-	}
-
-	static hrt_abstime _last_disarm_time{0};
-
 	if (_arming_state == vehicle_status_s::ARMING_STATE_ARMED) {
 		if (!_armed) {
 			_armed = true;
@@ -168,75 +138,86 @@ void CustomModule::safety_status_update()
 		}
 	} else if (_arming_state == vehicle_status_s::ARMING_STATE_DISARMED) {
 		if (_armed) {
-			if (hrt_absolute_time() - _last_disarm_time > 1_s) {
-				send_info_to_gcs("DISARMED.                   ENGAGING SAFETY.");
-				_last_disarm_time = hrt_absolute_time();
-			}
 			_armed = false;
-			_safety_check_passed = false;
 		}
-		return;
 	}
 
-	if (status.failsafe) {
-		if (!_failsafe_warn_once)
-		{
-			send_info_to_gcs("FAILSAFE ACTIVATED.         ENGAGING SAFETY.");
-			_failsafe_warn_once = true;
-		}
+	if(conditions_met()) {
+		_safety_check_passed = true;
+		_conditions_warn_once = false;
+	}
+	else if (_rc_high) {
 		_safety_check_passed = false;
-		return;
-	}
-	_failsafe_warn_once = false;
-
-	if (!conditions_met()) {
 		if (!_conditions_warn_once) {
 			send_info_to_gcs("SAFETY CONDITIONS NOT MET.  ENGAGING SAFETY.");
 			_conditions_warn_once = true;
 		}
-		_safety_check_passed = false;
-		return;
 	}
-	_conditions_warn_once = false;
+	else {
+		_safety_check_passed = false;
+		_conditions_warn_once = false;
+	}
+
 }
 
 bool CustomModule::conditions_met()
 {
-	// Optional since the calling function "safety_status_update" already implements this check
-	// if (!_param_safety_soft_en.get()) return true;
-
-	if (!_armed) return false;
-
-	hrt_abstime now = hrt_absolute_time();
-	if (now - _arming_timestamp < SAFETY_TIME) return false;
-
-	if (_nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_RTL ||
-	    _nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_LAND) return false;
-
-	float dist_xy = sqrtf((_local_pos_x - _arming_x) * (_local_pos_x - _arming_x) + (_local_pos_y - _arming_y) * (_local_pos_y - _arming_y));
-	if (dist_xy < SAFETY_DISTANCE) return false;
-
-	float dist_z = -(_local_pos_z - _arming_z);
-	if (dist_z < SAFETY_ALTITUDE) return false;
-
-	actuator_outputs_s outputs{};
-	if (_actuator_outputs_sub.updated()) {
-		_actuator_outputs_sub.copy(&outputs);
+	// This safety needs to check executed before returning the result
+	// New Home Position Setting
+	if (_param_safety_soft_en.get() & 0b10000000) {
+		update_home();
 	}
 
-	float pwm_min_val = (float)_param_pwm_min.get();
-	float pwm_max_val = (float)_param_pwm_max.get();
-	uint8_t rotor_count = (uint8_t)_param_ca_rotor_count.get();
-	float min_throttle_pwm = pwm_min_val + 0.1f * (pwm_max_val - pwm_min_val);
+	// Arming Check
+	if (_param_safety_soft_en.get() & 0b1) {
+		if (!_armed) return false;
+	}
 
-	bool motors_ok = true;
-	for (size_t i = 0; i < rotor_count; ++i) {
-		if (outputs.output[i] > 0.0f && outputs.output[i] < min_throttle_pwm) {
-			motors_ok = false;
-			break;
+	// Safety Time Check
+	if (_param_safety_soft_en.get() & 0b10) {
+		hrt_abstime now = hrt_absolute_time();
+		if ((now - _arming_timestamp < SAFETY_TIME) || _arming_timestamp <= 1) return false;
+	}
+
+	// Horizontal Distance Check
+	if (_param_safety_soft_en.get() & 0b100) {
+		float dist_xy = sqrtf((_local_pos_x - _arming_x) * (_local_pos_x - _arming_x) + (_local_pos_y - _arming_y) * (_local_pos_y - _arming_y));
+		if (dist_xy < SAFETY_DISTANCE) return false;
+	}
+
+	// Vertical Distance Check
+	if (_param_safety_soft_en.get() & 0b1000) {
+		float dist_z = -(_local_pos_z - _arming_z);
+		if (dist_z < SAFETY_ALTITUDE) return false;
+	}
+
+	// RTH/RTL + Land Mode Check
+	if (_param_safety_soft_en.get() & 0b10000) {
+		if (_nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_RTL ||
+	    	_nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_LAND) return false;
+	}
+
+	// PWM Check
+	if (_param_safety_soft_en.get() & 0b100000) {
+		float pwm_min_val = (float)_param_pwm_min.get();
+		float pwm_max_val = (float)_param_pwm_max.get();
+		uint8_t rotor_count = (uint8_t)_param_ca_rotor_count.get();
+		float min_throttle_pwm = pwm_min_val + 0.1f * (pwm_max_val - pwm_min_val); // 10% of the range
+
+		for (size_t i = 0; i < rotor_count; ++i) {
+			if (outputs.output[i] > 0.0f && outputs.output[i] < min_throttle_pwm) {
+				return false;
+				break;
+			}
 		}
 	}
-	return motors_ok;
+
+	// Failsafe Check
+	if (_param_safety_soft_en.get() & 0b1000000) {
+		if (_failsafe) return false;
+	}
+
+	return true;
 }
 
 void CustomModule::update_home()
@@ -272,6 +253,45 @@ void CustomModule::update_home()
 			_home_updated = true;
 			send_info_to_gcs("NEW HOME POSITION SET 50M   AHEAD IN FLIGHT DIRECTION.");
 		}
+	}
+}
+
+void CustomModule::update_topics()
+{
+	if (_vehicle_status_sub.updated()) {
+		_vehicle_status_sub.copy(&status);
+		_nav_state = status.nav_state;
+		_arming_state = status.arming_state;
+		_failsafe = status.failsafe;
+	}
+
+
+	if (_vehicle_local_position_sub.updated()) {
+		_vehicle_local_position_sub.copy(&pos);
+		_local_pos_x = pos.x;
+		_local_pos_y = pos.y;
+		_local_pos_z = pos.z;
+		_local_heading = pos.heading;
+	}
+
+
+	if (_vehicle_global_position_sub.updated()) {
+		_vehicle_global_position_sub.copy(&global_pos);
+		_global_lat = global_pos.lat;
+		_global_lon = global_pos.lon;
+		_global_alt = global_pos.alt;
+	}
+
+	if (_actuator_outputs_sub.updated()) {
+		_actuator_outputs_sub.copy(&outputs);
+	}
+
+	if (_rc_channels_sub.updated()) {
+		_rc_channels_sub.copy(&rc);
+	}
+
+	if (_distance_sensor_sub.updated()) {
+		_distance_sensor_sub.copy(&dist_sens);
 	}
 }
 

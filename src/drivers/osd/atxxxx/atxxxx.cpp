@@ -366,7 +366,7 @@ OSDatxxxx::add_proximity_dist(uint8_t pos_x, uint8_t pos_y)
 	char buf[27];
 	int ret = PX4_OK;
 
-	snprintf(buf, sizeof(buf), "PROXIMITY DISTANCE: %4.1f%c", (double)_proximity_dist, OSD_SYMBOL_M);
+	snprintf(buf, sizeof(buf), "PROXIMITY DISTANCE:%4.2f%c", (double)_proximity_dist, OSD_SYMBOL_M);
 	buf[sizeof(buf) - 1] = '\0';
 
 	for (int i = 0; buf[i] != '\0'; i++) {

@@ -107,6 +107,8 @@ private:
 
 	void update_home();
 
+	void update_topics();
+
 	DEFINE_PARAMETERS(
 		(ParamInt<px4::params::PWM_MAIN_MIN1>) 			_param_pwm_min,
 		(ParamInt<px4::params::PWM_MAIN_MAX1>) 			_param_pwm_max,
@@ -128,11 +130,21 @@ private:
 	// Publications
 	uORB::Publication<vehicle_command_s> _vehicle_command_pub{ORB_ID(vehicle_command)};
 
+	// uORB vars
+	actuator_outputs_s outputs{};
+	vehicle_status_s status{};
+	vehicle_local_position_s pos{};
+	vehicle_global_position_s global_pos{};
+	rc_channels_s rc{};
+	distance_sensor_s dist_sens{};
+
 	orb_advert_t _mavlink_log_pub{nullptr};
 	bool _servo_high{false};
+	bool _rc_high{false};
 
 	uint8_t _nav_state{0};
 	uint8_t _arming_state{0};
+	bool _failsafe{false};
 
 	float _local_pos_x{0.0f};
 	float _local_pos_y{0.0f};
