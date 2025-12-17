@@ -203,3 +203,32 @@ parameters:
             max: 18
             default: 12
 
+        FUSE_SOFT_EN:
+            description:
+                short: Enable Software based Safety Mechanism
+                long: |
+                    Warning: Only change it for debugging purposes.
+
+                    Enables the following safeties:
+                    - Checks if the vehicle is Armed.
+                    - Checks if 35s have passed since arming.
+                    - Checks if horizontal distance from arming position is more than 50m.
+                    - Checks if altitude is more than 50m from arming position.
+                    - Checks if vehicle is in RTH/RTL or Land mode.
+                    - Checks if PWM to each rotor is above 10% of PWM range defined.
+                    - Checks if no failsafe is activated.
+                    - Sets Home position to 50m away from arming position in the direction of flight.
+            type: bitmask
+            bit:
+                0: Arming Check
+                1: Safety Time Check
+                2: Horizontal Distance Check
+                3: Vertical Distance Check
+                4: RTH/RTL or Land Mode Check
+                5: PWM Check
+                6: Failsafe Check
+                7: Enable setting new Home Position 50m in the direction of flight
+            min: 0
+            max: 255
+            default: 255
+

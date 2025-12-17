@@ -79,7 +79,7 @@
 
 #define RC_THRESHOLD 0.5f
 
-#define MAX_MAV_CMD_TIMEOUT 3_s
+#define MAX_MAV_CMD_TIMEOUT 5_s
 #define RESET_TIMEOUT 15_s
 
 #define MAX_SAFETIES 4  // Safeties 1-3 + Pylon safety (4)
@@ -137,11 +137,17 @@ private:
 	void reset_pl(uint8_t pl_num);  // Initiate reset for specific PL (non-blocking)
 	void reset_all_pls();  // Initiate reset for all attached PLs
 
-	bool check_ack();
+	uint8_t check_ack();
 
 	bool conditions_met();
 
 	void parameters_update();
+
+	void update_topics();
+
+	void update_home();
+
+	bool check_n_exec_rst();
 
 	void process_rc_inputs();  // Unified for both types
 
@@ -159,7 +165,8 @@ private:
 		(ParamInt<px4::params::FUSE_PL_SL_RC_S2>)	_param_fuse_pl_sl_rc_s2,
 		(ParamInt<px4::params::FUSE_PL_SL_RC_S3>)	_param_fuse_pl_sl_rc_s3,
 		(ParamInt<px4::params::FUSE_PL_SF_RC_S1>)	_param_fuse_pl_sf_rc_s1,
-		(ParamInt<px4::params::FUSE_PL_SF_RC_S2>)	_param_fuse_pl_sf_rc_s2
+		(ParamInt<px4::params::FUSE_PL_SF_RC_S2>)	_param_fuse_pl_sf_rc_s2,
+		(ParamInt<px4::params::FUSE_SOFT_EN>)		_param_fuse_soft_en
 	)
 
 	uORB::Publication<vehicle_command_s> _vehicle_command_pub{ORB_ID(vehicle_command)};
@@ -171,9 +178,16 @@ private:
 	uORB::Subscription _vehicle_local_position_sub{ORB_ID(vehicle_local_position)};
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
 
+	vehicle_status_s status{};
+	vehicle_global_position_s gpos{};
+	vehicle_local_position_s lpos{};
+	rc_channels_s rc{};
+	actuator_outputs_s outputs{};
+
 	uint64_t _last_ack_timestamp{0};
+	// bool _awaiting_ack{false};
 	orb_advert_t _mavlink_log_pub{nullptr};
-	bool _pending_disengage{false};
+	// bool _pending_disengage{false};
 
 	uint8_t _rst_ch{7};
 	uint8_t _pl_slct_ch1{8};
@@ -200,8 +214,7 @@ private:
 	uint8_t _prev_pl_count{0};
 	uint32_t _prev_pl_mask{0};
 
-	bool _rst_info_once{false};
-	bool _rst_warn_once{false};
+	bool _safety_switch_warn_once{false};
 	bool _conditions_warn_once{false};
 	bool _switch_rst_once{false};
 	bool _mav_msg_once{false};
@@ -209,12 +222,15 @@ private:
 	bool _pl_mask_warn_once{false};
 	bool _pylon_chng_once{false};
 	bool _pl_info_req_to_once{false};
+	bool _bad_ack_once{false};
 
 	hrt_abstime _mav_command_timeout_counter{0};
 	hrt_abstime _start_time{0};
+	hrt_abstime _pl_info_time{0};
 
 	uint8_t _nav_state{0};
 	uint8_t _arming_state{0};
+	bool _failsafe{false};
 
 	float _local_pos_x{0.0f};
 	float _local_pos_y{0.0f};
@@ -296,6 +312,7 @@ private:
 	float _arming_alt{0.0f};
 
 	bool _home_updated{false};
+	bool _safety_check_passed{false};
 
 	// Per-PL state management
 	PL_STATE _pl_states[MAX_PLS + 1]{};  // Index 1 to MAX_PLS
