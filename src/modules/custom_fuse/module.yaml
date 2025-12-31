@@ -5,12 +5,12 @@ parameters:
         # Pylon configuration
         FUSE_PYLON_TYPE:
             description:
-                short: Type of Pylon (A or B)
+                short: Type of Pylon
             type: enum
             values:
                 0: Disabled
-                1: Type-A
-                2: Type-B
+                1: Type-A (Universal)
+                2: Type-B (Vertical)
             min: 0
             max: 2
             default: 0
@@ -177,7 +177,7 @@ parameters:
                 short: RC Switch 2 for PL Safety Control
                 long: |
                   Select the RC channel for RC Switch 2 to control the safety state (engage/disengage) of the selected PL.
-                  Always select a 3-position RC switch for this channel.
+                  Always select a 2-position RC switch for this channel.
                   Also set FUSE_PL_SF_RC_S1 parameter.
             type: enum
             values:

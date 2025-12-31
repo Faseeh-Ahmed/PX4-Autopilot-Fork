@@ -82,7 +82,7 @@
 #define MAX_MAV_CMD_TIMEOUT 5_s
 #define RESET_TIMEOUT 15_s
 
-#define MAX_SAFETIES 4  // Safeties 1-3 + Pylon safety (4)
+#define MAX_SAFETIES 3  // 2 Servos + 1 Electronic Bypass SW
 
 using namespace time_literals;
 
@@ -117,7 +117,6 @@ private:
 		SFTY1_DISENGAGED,
 		SFTY2_DISENGAGED,
 		SFTY3_DISENGAGED,
-		PYLON_SFTY_DISENGAGED,
 		RESETTING
 	};
 
@@ -220,12 +219,11 @@ private:
 	bool _mav_msg_once{false};
 	bool _pl_count_warn_once{false};
 	bool _pl_mask_warn_once{false};
-	bool _pylon_chng_once{false};
+	// bool _pylon_chng_once{false};
 	bool _pl_info_req_to_once{false};
 	bool _bad_ack_once{false};
 
 	hrt_abstime _mav_command_timeout_counter{0};
-	hrt_abstime _start_time{0};
 	hrt_abstime _pl_info_time{0};
 
 	uint8_t _nav_state{0};

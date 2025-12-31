@@ -54,7 +54,6 @@ bool CustomFuse::init()
 	if (!_pylon_type) return true;
 
 	_prev_pylon_type = _pylon_type;
-	_start_time = hrt_absolute_time();
 	return true;
 }
 
@@ -73,10 +72,10 @@ void CustomFuse::Run()
 	check_pylon_type();
 
 	if (_pylon_type != _prev_pylon_type) {
-		if (!_pylon_chng_once) {
-			send_info_to_gcs("PYLON TYPE CHANGED          RESTART FLIGHT CONTROLLER");
-			_pylon_chng_once = true;
-		}
+		// if (!_pylon_chng_once) {
+		// 	send_info_to_gcs("PYLON TYPE CHANGED          RESTART FLIGHT CONTROLLER");
+		// 	_pylon_chng_once = true;
+		// }
 		return;
 	}
 	if (!_pylon_type) return;
@@ -162,9 +161,9 @@ void CustomFuse::process_rc_inputs()
 		_safety_num = 2;
 	} else if (_pl_sfty_ch2_state == 1 && _pl_sfty_ch1_state == 2) {
 		_safety_num = 3;
-	} else if (_pl_sfty_ch2_state == 2 && _pl_sfty_ch1_state == 2) {
+	} /*else if (_pl_sfty_ch2_state == 2 && _pl_sfty_ch1_state == 2) {
 		_safety_num = 4;
-	}
+	}*/
 
 	// Process Select RC channels based on pylon type
 	_deb_pl_slct_ch1.update(rc.channels[_pl_slct_ch1 - 1], now, _rc_debounce_ms);
@@ -283,10 +282,10 @@ void CustomFuse::update_states()
 				_pl_mav_sent[_selected_pl] = false;  // Retry
 			}
 		}
-		if (_pl_states[_selected_pl] == PL_STATE::PYLON_SFTY_DISENGAGED) {
-			// Optional: Trigger release or other action
-			// _pl_states[_selected_pl] = PL_STATE::ALL_SAFETIES_ENGAGED;
-		}
+		// if (_pl_states[_selected_pl] == PL_STATE::PYLON_SFTY_DISENGAGED) {
+		// 	// Optional: Trigger release or other action
+		// 	// _pl_states[_selected_pl] = PL_STATE::ALL_SAFETIES_ENGAGED;
+		// }
 	}
 
 	// Handle resetting PLs
@@ -480,7 +479,6 @@ void CustomFuse::update_topics()
 		_failsafe = status.failsafe;
 	}
 
-
 	if (_vehicle_local_position_sub.updated()) {
 		_vehicle_local_position_sub.copy(&lpos);
 		_local_pos_x = lpos.x;
@@ -488,7 +486,6 @@ void CustomFuse::update_topics()
 		_local_pos_z = lpos.z;
 		_local_heading = lpos.heading;
 	}
-
 
 	if (_vehicle_global_position_sub.updated()) {
 		_vehicle_global_position_sub.copy(&gpos);
