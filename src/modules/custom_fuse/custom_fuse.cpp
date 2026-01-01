@@ -72,10 +72,10 @@ void CustomFuse::Run()
 	check_pylon_type();
 
 	if (_pylon_type != _prev_pylon_type) {
-		// if (!_pylon_chng_once) {
-		// 	send_info_to_gcs("PYLON TYPE CHANGED          RESTART FLIGHT CONTROLLER");
-		// 	_pylon_chng_once = true;
-		// }
+		if (!_pylon_chng_once) {
+			send_info_to_gcs("PYLON TYPE CHANGED          RESTART FLIGHT CONTROLLER");
+			_pylon_chng_once = true;
+		}
 		return;
 	}
 	if (!_pylon_type) return;

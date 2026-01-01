@@ -219,7 +219,7 @@ private:
 	bool _mav_msg_once{false};
 	bool _pl_count_warn_once{false};
 	bool _pl_mask_warn_once{false};
-	// bool _pylon_chng_once{false};
+	bool _pylon_chng_once{false};
 	bool _pl_info_req_to_once{false};
 	bool _bad_ack_once{false};
 
