@@ -634,6 +634,8 @@ else
 		zenoh start
 	fi
 
+	custom_module start
+
 #
 # End of autostart.
 #
