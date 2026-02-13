@@ -33,6 +33,7 @@
 
 /**
  * @file custom_fuse.h
+ * @author Faseeh Ahmed
  * @brief Custom MAVLink module for sending safety engagement/disengagement commands to Pylon.
  */
 #pragma once
