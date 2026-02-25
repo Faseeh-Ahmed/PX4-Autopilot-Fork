@@ -81,6 +81,7 @@
 #define RC_THRESHOLD 0.5f
 
 #define MAX_MAV_CMD_TIMEOUT 5_s
+#define MAX_MAV_CMD_RETRY_COUNT 3
 #define RESET_TIMEOUT 15_s
 
 #define MAX_SAFETIES 3  // 2 Servos + 1 Electronic Bypass SW
@@ -133,6 +134,8 @@ private:
 	void check_pylon_type();
 
 	void get_pl_info();
+
+	void update_pl_info(uint32_t _pl_mask);
 
 	void reset_pl(uint8_t pl_num);  // Initiate reset for specific PL (non-blocking)
 	void reset_all_pls();  // Initiate reset for all attached PLs
@@ -319,4 +322,5 @@ private:
 	uint8_t _pl_reset_sfty[MAX_PLS + 1]{};  // Current safety being reset (starts at 4)
 	bool _pl_mav_sent[MAX_PLS + 1]{};  // Flag if MAV command sent, waiting for ack
 	uint8_t _max_pls{0};  // 2 for type 1, 10 for type 2
+	uint8_t _pl_mav_cmd_retry_cnt[MAX_PLS + 1]{};
 };

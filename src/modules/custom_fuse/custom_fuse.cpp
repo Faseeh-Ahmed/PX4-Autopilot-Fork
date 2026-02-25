@@ -41,6 +41,7 @@ CustomFuse::CustomFuse() :
 		_pl_states[i] = PL_STATE::NOT_PRESENT;
 		_pl_reset_sfty[i] = 0;
 		_pl_mav_sent[i] = false;
+		_pl_mav_cmd_retry_cnt[i] = 0;
 	}
 }
 
@@ -193,6 +194,7 @@ void CustomFuse::update_states()
 {
 	hrt_abstime now = hrt_absolute_time();
 
+	// Handle PL Selection
 	if (_selected_pl != _prev_selected_pl) {
 		if (_prev_selected_pl != 0 && _pl_states[_prev_selected_pl] > PL_STATE::SELECTED) {
 			send_info_to_gcs("PL SELECTION CHANGED.       RESETTING PREVIOUS PL.");
@@ -220,6 +222,8 @@ void CustomFuse::update_states()
 		_prev_selected_pl = _selected_pl;
 	}
 
+	now = hrt_absolute_time();
+
 	// Handle selected PL progression/regression
 	if (_selected_pl != 0 && _pl_states[_selected_pl] >= PL_STATE::SELECTED && _pl_states[_selected_pl] != PL_STATE::RESETTING) {
 		int current_sfty = static_cast<int>(_pl_states[_selected_pl]) - static_cast<int>(PL_STATE::SELECTED);
@@ -237,20 +241,27 @@ void CustomFuse::update_states()
 				send_info_to_gcs(msg);
 				_pl_states[_selected_pl] = static_cast<PL_STATE>(static_cast<int>(_pl_states[_selected_pl]) + 1);
 				_pl_mav_sent[_selected_pl] = false;
-			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_DENIED && !_bad_ack_once) {
+			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_DENIED && !_bad_ack_once && _pl_mav_cmd_retry_cnt[_selected_pl] < MAX_MAV_CMD_RETRY_COUNT) {
 				send_info_to_gcs("COMMAND DENIED.             RETRYING.");
 				_bad_ack_once = true;
 				_pl_mav_sent[_selected_pl] = false;  // Retry
-			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED && !_bad_ack_once) {
+				_pl_mav_cmd_retry_cnt[_selected_pl]++;
+			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED && !_bad_ack_once && _pl_mav_cmd_retry_cnt[_selected_pl] < MAX_MAV_CMD_RETRY_COUNT) {
 				send_info_to_gcs("COMMAND REJECTED TEMP.      RETRYING.");
 				_bad_ack_once = true;
 				_pl_mav_sent[_selected_pl] = false;  // Retry
+				_pl_mav_cmd_retry_cnt[_selected_pl]++;
 			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_UNSUPPORTED && !_bad_ack_once) {
 				send_info_to_gcs("COMMAND UNSUPPORTED.");
 				_bad_ack_once = true;
-			} else if (now - _pl_timers[_selected_pl] > MAX_MAV_CMD_TIMEOUT && check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_IN_PROGRESS) {
+			} else if (now - _pl_timers[_selected_pl] > MAX_MAV_CMD_TIMEOUT && check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_IN_PROGRESS && _pl_mav_cmd_retry_cnt[_selected_pl] < MAX_MAV_CMD_RETRY_COUNT) {
 				send_info_to_gcs("ACKNOWLDGEMENT TIMED OUT.   RETRYING.");
 				_pl_mav_sent[_selected_pl] = false;  // Retry
+				_pl_mav_cmd_retry_cnt[_selected_pl]++;
+			} else if (_pl_mav_cmd_retry_cnt[_selected_pl] >= MAX_MAV_CMD_RETRY_COUNT) {
+				send_info_to_gcs("RETRIES FAILED.             PL STATUS UNKNOWN.");
+				_pl_states[_selected_pl] = PL_STATE::NOT_PRESENT;
+				_pl_mav_cmd_retry_cnt[_selected_pl] = 0;
 			}
 		} else if (_safety_num < current_sfty) {
 			if (!_pl_mav_sent[_selected_pl]) {
@@ -266,20 +277,27 @@ void CustomFuse::update_states()
 				send_info_to_gcs(msg);
 				_pl_states[_selected_pl] = static_cast<PL_STATE>(static_cast<int>(_pl_states[_selected_pl]) - 1);
 				_pl_mav_sent[_selected_pl] = false;
-			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_DENIED && !_bad_ack_once) {
+			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_DENIED && !_bad_ack_once && _pl_mav_cmd_retry_cnt[_selected_pl] < MAX_MAV_CMD_RETRY_COUNT) {
 				send_info_to_gcs("COMMAND DENIED.             RETRYING.");
 				_bad_ack_once = true;
 				_pl_mav_sent[_selected_pl] = false;  // Retry
-			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED && !_bad_ack_once) {
+				_pl_mav_cmd_retry_cnt[_selected_pl]++;
+			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED && !_bad_ack_once && _pl_mav_cmd_retry_cnt[_selected_pl] < MAX_MAV_CMD_RETRY_COUNT) {
 				send_info_to_gcs("COMMAND REJECTED TEMP.      RETRYING.");
 				_bad_ack_once = true;
 				_pl_mav_sent[_selected_pl] = false;  // Retry
+				_pl_mav_cmd_retry_cnt[_selected_pl]++;
 			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_UNSUPPORTED && !_bad_ack_once) {
 				send_info_to_gcs("COMMAND UNSUPPORTED.");
 				_bad_ack_once = true;
-			} else if (now - _pl_timers[_selected_pl] > MAX_MAV_CMD_TIMEOUT && check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_IN_PROGRESS) {
+			} else if (now - _pl_timers[_selected_pl] > MAX_MAV_CMD_TIMEOUT && check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_IN_PROGRESS && _pl_mav_cmd_retry_cnt[_selected_pl] < MAX_MAV_CMD_RETRY_COUNT) {
 				send_info_to_gcs("ACKNOWLDGEMENT TIMED OUT.   RETRYING.");
 				_pl_mav_sent[_selected_pl] = false;  // Retry
+				_pl_mav_cmd_retry_cnt[_selected_pl]++;
+			} else if (_pl_mav_cmd_retry_cnt[_selected_pl] >= MAX_MAV_CMD_RETRY_COUNT) {
+				send_info_to_gcs("RETRIES FAILED.             PL STATUS UNKNOWN.");
+				_pl_states[_selected_pl] = PL_STATE::NOT_PRESENT;
+				_pl_mav_cmd_retry_cnt[_selected_pl] = 0;
 			}
 		}
 		// if (_pl_states[_selected_pl] == PL_STATE::PYLON_SFTY_DISENGAGED) {
@@ -288,10 +306,12 @@ void CustomFuse::update_states()
 		// }
 	}
 
+	now = hrt_absolute_time();
+
 	// Handle resetting PLs
 	for (uint8_t pl = 1; pl <= _max_pls; ++pl) {
 		if (_pl_states[pl] == PL_STATE::RESETTING) {
-			if (_pl_reset_sfty[pl] == 0) _pl_reset_sfty[pl] = MAX_SAFETIES;  // Init if first time
+			// if (_pl_reset_sfty[pl] == 0) _pl_reset_sfty[pl] = MAX_SAFETIES;  // Init if first time
 			uint8_t sfty = _pl_reset_sfty[pl];
 			if (!_pl_mav_sent[pl]) {
 				bool for_pylon = (sfty == 4);
@@ -301,6 +321,7 @@ void CustomFuse::update_states()
 			}
 			if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_ACCEPTED) {
 				_bad_ack_once = false;
+				_pl_mav_cmd_retry_cnt[pl] = 0;
 				char msg[50];
 				snprintf(msg, sizeof(msg), "PL %d SAFETY %d ENGAGED.", pl, sfty);
 				send_info_to_gcs(msg);
@@ -310,20 +331,27 @@ void CustomFuse::update_states()
 					_pl_states[pl] = PL_STATE::ALL_SAFETIES_ENGAGED;
 					send_info_to_gcs("RESET COMPLETE FOR PL.");
 				}
-			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_DENIED && !_bad_ack_once) {
+			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_DENIED && !_bad_ack_once && _pl_mav_cmd_retry_cnt[pl] < MAX_MAV_CMD_RETRY_COUNT) {
 				send_info_to_gcs("COMMAND DENIED.             RETRYING.");
 				_bad_ack_once = true;
-				_pl_mav_sent[_selected_pl] = false;  // Retry
-			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED && !_bad_ack_once) {
+				_pl_mav_sent[pl] = false;  // Retry
+				_pl_mav_cmd_retry_cnt[pl]++;
+			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED && !_bad_ack_once && _pl_mav_cmd_retry_cnt[pl] < MAX_MAV_CMD_RETRY_COUNT) {
 				send_info_to_gcs("COMMAND REJECTED TEMP.      RETRYING.");
 				_bad_ack_once = true;
-				_pl_mav_sent[_selected_pl] = false;  // Retry
+				_pl_mav_sent[pl] = false;  // Retry
+				_pl_mav_cmd_retry_cnt[pl]++;
 			} else if (check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_UNSUPPORTED && !_bad_ack_once) {
 				send_info_to_gcs("COMMAND UNSUPPORTED.");
 				_bad_ack_once = true;
-			} else if (now - _pl_timers[_selected_pl] > MAX_MAV_CMD_TIMEOUT && check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_IN_PROGRESS) {
+			} else if (now - _pl_timers[pl] > MAX_MAV_CMD_TIMEOUT && check_ack() == vehicle_command_ack_s::VEHICLE_CMD_RESULT_IN_PROGRESS && _pl_mav_cmd_retry_cnt[pl] < MAX_MAV_CMD_RETRY_COUNT) {
 				send_info_to_gcs("ACKNOWLDGEMENT TIMED OUT.   RETRYING.");
-				_pl_mav_sent[_selected_pl] = false;  // Retry
+				_pl_mav_sent[pl] = false;  // Retry
+				_pl_mav_cmd_retry_cnt[pl]++;
+			} else if (_pl_mav_cmd_retry_cnt[pl] >= MAX_MAV_CMD_RETRY_COUNT) {
+				send_info_to_gcs("RETRIES FAILED.             PL STATUS UNKNOWN.");
+				_pl_states[pl] = PL_STATE::NOT_PRESENT;
+				_pl_mav_cmd_retry_cnt[pl] = 0;
 			}
 		}
 	}
@@ -376,7 +404,8 @@ void CustomFuse::safety_status_update()
 
 bool CustomFuse::conditions_met()
 {
-	// This safety needs to be executed before returning the result
+	// This safety check needs to be executed before returning the result
+	// will be separated from rest of the safety checks in the future
 	// New Home Position Setting
 	if (_param_fuse_soft_en.get() & 0b10000000) {
 		update_home();
@@ -518,7 +547,22 @@ uint8_t CustomFuse::check_ack()
 
 void CustomFuse::send_info_to_gcs(const char *message)
 {
+	px4_usleep(1000000); // 1 Second
 	mavlink_log_emergency(&_mavlink_log_pub, "%s", message);
+}
+
+void CustomFuse::update_pl_info(uint32_t mask)
+{
+	// Update states based on mask (standardized: bit (pl-1))
+	for (uint8_t pl = 1; pl <= _max_pls; ++pl) {
+		if (mask & (1 << (pl - 1))) {
+			if (_pl_states[pl] == PL_STATE::NOT_PRESENT) {
+				_pl_states[pl] = PL_STATE::ALL_SAFETIES_ENGAGED;
+			}
+		} else {
+			_pl_states[pl] = PL_STATE::NOT_PRESENT;
+		}
+	}
 }
 
 void CustomFuse::get_pl_info()
@@ -548,24 +592,31 @@ void CustomFuse::get_pl_info()
 					_pl_mask = static_cast<uint32_t>(ack.result_param2);
 					_pl_info_req_to_once = false;
 					if ((_pl_count != _prev_pl_count) || (_pl_mask != _prev_pl_mask)) {
-						send_info_to_gcs("PL COUNT UPDATED");
+
 						_prev_pl_count = _pl_count;
 						_prev_pl_mask = _pl_mask;
-						// Update states based on mask (standardized: bit (pl-1))
-						for (uint8_t pl = 1; pl <= _max_pls; ++pl) {
-							if (_pl_mask & (1 << (pl - 1))) {
-								if (_pl_states[pl] == PL_STATE::NOT_PRESENT) {
-									_pl_states[pl] = PL_STATE::ALL_SAFETIES_ENGAGED;
-								}
-							} else {
-								_pl_states[pl] = PL_STATE::NOT_PRESENT;
-							}
-						}
+
+						update_pl_info(_pl_mask);
+						send_info_to_gcs("PL COUNT UPDATED");
+
+						// // Update states based on mask (standardized: bit (pl-1))
+						// for (uint8_t pl = 1; pl <= _max_pls; ++pl) {
+						// 	if (_pl_mask & (1 << (pl - 1))) {
+						// 		if (_pl_states[pl] == PL_STATE::NOT_PRESENT) {
+						// 			_pl_states[pl] = PL_STATE::ALL_SAFETIES_ENGAGED;
+						// 		}
+						// 	} else {
+						// 		_pl_states[pl] = PL_STATE::NOT_PRESENT;
+						// 	}
+						// }
 					}
 					return;
 				} else {
 					_pl_count = 0;
 					_pl_mask = 0;
+
+					update_pl_info(_pl_mask);
+
 					send_info_to_gcs("PL INFO MISSING.         CHECK PYLON CONNECTION.");
 					return;
 				}
@@ -575,6 +626,9 @@ void CustomFuse::get_pl_info()
 	}
 	_pl_count = 0;
 	_pl_mask = 0;
+
+	update_pl_info(_pl_mask);
+
 	if (!_pl_info_req_to_once) {
 		send_info_to_gcs("PL INFO REQUEST TIMED OUT.  CHECK PYLON CONNECTION.");
 		_pl_info_req_to_once = true;
